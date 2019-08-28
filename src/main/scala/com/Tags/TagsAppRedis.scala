@@ -25,9 +25,7 @@ object TagsAppRedis extends Tag{
 
     if (appname.equals("其他")){
       appname = conn.hget("APP_DICT",appid)
-
-//      appname = appDict.getOrElse(appid, "None")
-      if (appname.equals("None")){
+      if (appname == null){
         return list
       }else{
         list :+= ("APP" + appname, 1)

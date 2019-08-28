@@ -23,7 +23,7 @@ object AppDictMap {
     val jedis = new Jedis("hdp-01", 6379)
     val map = getAppDictMap(sQLContext)
     map.foreach(x => {
-      val appid = "appid:" + x._1
+      val appid = x._1
       val appname = x._2
       jedis.hset("APP_DICT",appid,appname)
     })

@@ -37,4 +37,26 @@ object TagsUtils {
       case v if StringUtils.isNoneBlank(v.getAs[String]("idfasha1")) => "ID1: " + v.getAs[String]("idfasha1")
     }
   }
+  //获取所有id
+  def getAllUserId(row: Row):List[String] = {
+    var list = List[String]()
+    if (StringUtils.isNoneBlank(row.getAs[String]("imei")) ) list:+= "IM: " + row.getAs[String]("imei")
+    if (StringUtils.isNoneBlank(row.getAs[String]("mac")) ) list:+= "MAC: " + row.getAs[String]("mac")
+    if (StringUtils.isNoneBlank(row.getAs[String]("openudid")))  list:+= "OP: " + row.getAs[String]("openudid")
+    if (StringUtils.isNoneBlank(row.getAs[String]("androidid")))  list:+= "AN: " + row.getAs[String]("androidid")
+    if (StringUtils.isNoneBlank(row.getAs[String]("idfa")))  list:+= "ID: " + row.getAs[String]("idfa")
+    if (StringUtils.isNoneBlank(row.getAs[String]("imeimd5")))  list:+= "IM5: " + row.getAs[String]("imeimd5")
+    if (StringUtils.isNoneBlank(row.getAs[String]("macmd5")))  list:+= "MAC5: " + row.getAs[String]("macmd5")
+    if (StringUtils.isNoneBlank(row.getAs[String]("openudidmd5")))  list:+= "OP5: " + row.getAs[String]("openudidmd5")
+    if (StringUtils.isNoneBlank(row.getAs[String]("androididmd5")))  list:+= "AN5: " + row.getAs[String]("androididmd5")
+    if (StringUtils.isNoneBlank(row.getAs[String]("idfamd5")))  list:+= "ID5: " + row.getAs[String]("idfamd5")
+    if (StringUtils.isNoneBlank(row.getAs[String]("imeisha1")))  list:+= "IM1: " + row.getAs[String]("imeisha1")
+    if (StringUtils.isNoneBlank(row.getAs[String]("macsha1")))  list:+= "MAC1: " + row.getAs[String]("macsha1")
+    if (StringUtils.isNoneBlank(row.getAs[String]("openudidsha1")))  list:+= "OP1: " + row.getAs[String]("openudidsha1")
+    if (StringUtils.isNoneBlank(row.getAs[String]("androididsha1")))  list:+= "AN1: " + row.getAs[String]("androididsha1")
+    if (StringUtils.isNoneBlank(row.getAs[String]("idfasha1")))  list:+= "ID1: " + row.getAs[String]("idfasha1")
+
+    list
+
+  }
 }

@@ -1,6 +1,7 @@
 package com.Tags
 
-import com.utils.{AppDictMap, TagsUtils}
+import com.graphx.GraphUserId
+import com.utils.{AppDictMap, TagsUtils, Utils2Type}
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.{SparkConf, SparkContext}
 
@@ -53,6 +54,9 @@ object TagsContext {
         .union(deviceTags)
         .union(keywordsTags)
         .union(locationTags)
+      val users = TagsUtils.getAllUserId(row)
+      GraphUserId.graphUserId(users, tags)
+
       (userid, tags)
     })
     // 聚合

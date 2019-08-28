@@ -1,13 +1,16 @@
 package com.Tags
 
+import com.graphx.GraphUserId
 import com.typesafe.config.ConfigFactory
-import com.utils.{AppDictMap, RedisPool, TagsUtils}
-import org.apache.hadoop.hbase.{HColumnDescriptor, HTableDescriptor, TableName}
+import com.utils.{RedisPool, TagsUtils}
 import org.apache.hadoop.hbase.client.{ConnectionFactory, Put}
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable
 import org.apache.hadoop.hbase.mapred.TableOutputFormat
 import org.apache.hadoop.hbase.util.Bytes
+import org.apache.hadoop.hbase.{HColumnDescriptor, HTableDescriptor, TableName}
 import org.apache.hadoop.mapred.JobConf
+import org.apache.spark.graphx.{Edge, Graph}
+import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SQLContext
 import org.apache.spark.{SparkConf, SparkContext}
 import redis.clients.jedis.Jedis
@@ -17,7 +20,7 @@ import redis.clients.jedis.Jedis
   * @Author Bi ChuanXin
   * @Date 2019/8/23
   */
-object TagsContextRedis {
+object TagsContextRedis3 {
   def main(args: Array[String]): Unit = {
     if (args.length != 5){
       println("目录不匹配")
@@ -65,13 +68,14 @@ object TagsContextRedis {
 
 //    AppDictMap.initRedis(sQLContext)
     // 过滤符合id的数据
-    val tag = df.filter(TagsUtils.OneUserId)
+    val baseRDD = df.filter(TagsUtils.OneUserId)
       .mapPartitions(part =>{
         val conn: Jedis = RedisPool.getConnection()
 
         val tuples: Iterator[(String, List[(String, Int)])] = part.map(row => {
           //取出用户id
-          val userid = TagsUtils.getOneUserId(row)
+          val userid = TagsUtils.getAllUserId(row)
+          GraphUserId.graphUserId( userid, List())
           // 接下来通过row数据 打上 所有标签（按照需求）
           //广告类型标签
           val adTags = TagsAd.makeTags(row)
@@ -94,29 +98,30 @@ object TagsContextRedis {
             .union(keywordsTags)
             .union(locationTags)
             .union(businessTags)
-          (userid, tags)
+          ("", tags)
         })
         conn.close()
         tuples
       })
-    // 聚合
-    tag.reduceByKey((l1, l2) => {
-      val list: List[(String, Int)] = l1.union(l2)
-      val grouped: Map[String, List[(String, Int)]] = list.groupBy(_._1)
-      val sum: Map[String, Int] = grouped.mapValues(_.size)
-      val value: List[(String, Int)] = sum.toList
-      value
-    }).map{
-      case (userid, userTags) => {
-        val put = new Put(Bytes.toBytes(userid))
-        //处理标签
-        val tags = userTags.map(t => t._1+","+t._2).mkString(",")
-        put.addImmutable(Bytes.toBytes("tags"), Bytes.toBytes(day), Bytes.toBytes(tags))
-        (new ImmutableBytesWritable(), put)
+    // 构建边的集合
+    val edges: RDD[Edge[Int]] = baseRDD.flatMap(tp => {
+      // A B C : A->B A->C
+      tp._1.map(uId => Edge(tp._1.head.hashCode, uId.hashCode, 0))
+    })
+    //edges.take(20).foreach(println)
+    // 构建图
+    val graph = Graph(vertiesRDD,edges)
+    // 取出顶点 使用的是图计算中的连通图算法
+    val vertices = graph.connectedComponents().vertices
+    // 处理所有的标签和id
+    vertices.join(vertiesRDD).map{
+      case (uId,(conId,tagsAll))=>(conId,tagsAll)
+    }.reduceByKey((list1,list2)=>{
+      // 聚合所有的标签
+      (list1++list2).groupBy(_._1).mapValues(_.map(_._2).sum).toList
+    })
+      .take(20).foreach(println)
 
-
-      }
-    }.saveAsHadoopDataset(jobconf)
-//    tag1.collect.foreach(println)
+    sc.stop()
   }
 }
